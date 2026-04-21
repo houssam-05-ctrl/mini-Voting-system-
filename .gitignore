@@ -1,0 +1,29 @@
+# ── Sensitive config ─────────────────────────────────────────
+config/database.php
+
+# ── Environment variables ────────────────────────────────────
+.env
+.env.local
+.env.production
+
+# ── PHP / XAMPP ──────────────────────────────────────────────
+*.log
+*.cache
+/vendor/
+
+# ── Session files ────────────────────────────────────────────
+/tmp/
+sess_*
+
+# ── Debug files (on avait créé celui-là) ────────────────────
+api/debug.php
+
+# ── OS / IDE ─────────────────────────────────────────────────
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db
+
+# ── Cookie files de test ─────────────────────────────────────
+*.txt
+cookies.txt

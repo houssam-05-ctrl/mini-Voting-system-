@@ -1,0 +1,1156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SecureVote — Cryptographic Voting System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ── Reset & Base ─────────────────────────────────────── */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #080c0f;
+        --surface: #0e1419;
+        --border: #1c2730;
+        --border-hi: #2e4052;
+        --text: #c8d8e4;
+        --muted: #4a6070;
+        --green: #00e5a0;
+        --green-dim: #00856040;
+        --amber: #f0a500;
+        --red: #ff4d6d;
+        --blue: #3a9dd8;
+        --mono: "IBM Plex Mono", monospace;
+        --sans: "Syne", sans-serif;
+        --radius: 4px;
+      }
+
+      html,
+      body {
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      /* subtle grid bg */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(0, 229, 160, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 229, 160, 0.03) 1px, transparent 1px);
+        background-size: 32px 32px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* ── Layout ────────────────────────────────────────────── */
+      .app {
+        position: relative;
+        z-index: 1;
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 32px 20px 80px;
+      }
+
+      /* ── Header ────────────────────────────────────────────── */
+      header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 40px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--border);
+      }
+      .logo-block {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .logo {
+        font-family: var(--sans);
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        color: #fff;
+      }
+      .logo span {
+        color: var(--green);
+      }
+      .tagline {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+      }
+      .auth-status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .auth-status .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--muted);
+      }
+      .auth-status.logged-in .dot {
+        background: var(--green);
+        box-shadow: 0 0 6px var(--green);
+      }
+      .auth-status.logged-in {
+        color: var(--green);
+      }
+      #logout-btn {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 10px;
+        padding: 3px 10px;
+        border-radius: var(--radius);
+        cursor: pointer;
+        letter-spacing: 0.05em;
+        transition: 0.2s;
+      }
+      #logout-btn:hover {
+        border-color: var(--red);
+        color: var(--red);
+      }
+
+      /* ── Tabs ──────────────────────────────────────────────── */
+      .tabs {
+        display: flex;
+        gap: 0;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 32px;
+      }
+      .tab-btn {
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 10px 20px;
+        cursor: pointer;
+        transition: 0.15s;
+        margin-bottom: -1px;
+      }
+      .tab-btn:hover {
+        color: var(--text);
+      }
+      .tab-btn.active {
+        color: var(--green);
+        border-bottom-color: var(--green);
+      }
+
+      /* ── Panels ────────────────────────────────────────────── */
+      .panel {
+        display: none;
+        animation: fadeIn 0.2s ease;
+      }
+      .panel.active {
+        display: block;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* ── Cards ─────────────────────────────────────────────── */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 28px;
+        margin-bottom: 20px;
+      }
+      .card-title {
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .card-title::before {
+        content: "//";
+        color: var(--green);
+        font-weight: 600;
+      }
+
+      /* ── Forms ─────────────────────────────────────────────── */
+      .form-group {
+        margin-bottom: 16px;
+      }
+      label {
+        display: block;
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      input[type="text"],
+      input[type="email"],
+      input[type="password"] {
+        width: 100%;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 13px;
+        padding: 10px 14px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      input:focus {
+        border-color: var(--green);
+        box-shadow: 0 0 0 2px var(--green-dim);
+      }
+
+      /* ── Buttons ───────────────────────────────────────────── */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        padding: 10px 22px;
+        border-radius: var(--radius);
+        border: none;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      .btn-primary {
+        background: var(--green);
+        color: #08150f;
+      }
+      .btn-primary:hover {
+        background: #00c890;
+        box-shadow: 0 0 16px var(--green-dim);
+      }
+      .btn-primary:disabled {
+        background: #1a3028;
+        color: var(--muted);
+        cursor: not-allowed;
+      }
+      .btn-ghost {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--muted);
+      }
+      .btn-ghost:hover {
+        border-color: var(--green);
+        color: var(--green);
+      }
+      .btn-sm {
+        padding: 6px 14px;
+        font-size: 11px;
+      }
+
+      /* ── Vote choices ──────────────────────────────────────── */
+      .choice-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+      .choice-card {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 18px 14px;
+        cursor: pointer;
+        transition: 0.2s;
+        text-align: center;
+        font-family: var(--mono);
+      }
+      .choice-card:hover {
+        border-color: var(--blue);
+        color: var(--blue);
+      }
+      .choice-card.selected {
+        border-color: var(--green);
+        background: var(--green-dim);
+        color: var(--green);
+      }
+      .choice-card .choice-label {
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .choice-card .choice-id {
+        font-size: 10px;
+        color: var(--muted);
+        margin-top: 4px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .choice-card.selected .choice-id {
+        color: var(--green);
+        opacity: 0.6;
+      }
+
+      /* ── Alert / Flash ─────────────────────────────────────── */
+      .alert {
+        display: none;
+        font-family: var(--mono);
+        font-size: 12px;
+        padding: 12px 16px;
+        border-radius: var(--radius);
+        border-left: 3px solid;
+        margin-bottom: 16px;
+      }
+      .alert.show {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .alert-success {
+        background: #001a10;
+        border-color: var(--green);
+        color: var(--green);
+      }
+      .alert-error {
+        background: #1a0008;
+        border-color: var(--red);
+        color: var(--red);
+      }
+      .alert-info {
+        background: #001220;
+        border-color: var(--blue);
+        color: var(--blue);
+      }
+
+      /* ── Results bar chart ─────────────────────────────────── */
+      .result-row {
+        margin-bottom: 18px;
+      }
+      .result-header {
+        display: flex;
+        justify-content: space-between;
+        font-family: var(--mono);
+        font-size: 12px;
+        margin-bottom: 6px;
+      }
+      .result-bar-track {
+        height: 8px;
+        background: var(--border);
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      .result-bar-fill {
+        height: 100%;
+        border-radius: 4px;
+        background: var(--green);
+        transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .result-pct {
+        color: var(--muted);
+      }
+
+      /* ── Hash chain visualizer ─────────────────────────────── */
+      .chain-block {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px;
+        margin-bottom: 10px;
+        position: relative;
+        font-family: var(--mono);
+        font-size: 11px;
+        transition: border-color 0.2s;
+      }
+      .chain-block.valid {
+        border-left: 3px solid var(--green);
+      }
+      .chain-block.invalid {
+        border-left: 3px solid var(--red);
+      }
+      .chain-block-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .block-id {
+        font-size: 10px;
+        color: var(--muted);
+        letter-spacing: 0.1em;
+      }
+      .block-badge {
+        font-size: 9px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 2px;
+      }
+      .block-badge.ok {
+        background: #001a10;
+        color: var(--green);
+      }
+      .block-badge.err {
+        background: #1a0008;
+        color: var(--red);
+      }
+      .hash-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 4px;
+        align-items: flex-start;
+      }
+      .hash-key {
+        color: var(--muted);
+        min-width: 80px;
+        flex-shrink: 0;
+      }
+      .hash-val {
+        color: var(--text);
+        word-break: break-all;
+        font-size: 10px;
+      }
+      .hash-val.highlight {
+        color: var(--green);
+      }
+      .chain-connector {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 20px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      /* ── Log table ─────────────────────────────────────────── */
+      .log-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: var(--mono);
+        font-size: 11px;
+      }
+      .log-table th {
+        text-align: left;
+        color: var(--muted);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border);
+      }
+      .log-table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border);
+        color: var(--text);
+      }
+      .log-table tr:hover td {
+        background: var(--surface);
+      }
+      .action-badge {
+        font-size: 9px;
+        padding: 2px 7px;
+        border-radius: 2px;
+        letter-spacing: 0.05em;
+      }
+      .action-badge.LOGIN {
+        background: #001220;
+        color: var(--blue);
+      }
+      .action-badge.REGISTER {
+        background: #0a1400;
+        color: #90d040;
+      }
+      .action-badge.VOTE {
+        background: #001a10;
+        color: var(--green);
+      }
+      .action-badge.DUPLICATE_VOTE,
+      .action-badge.LOGIN_FAIL {
+        background: #1a0008;
+        color: var(--red);
+      }
+
+      /* ── Integrity banner ──────────────────────────────────── */
+      .integrity-banner {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 20px;
+        border-radius: var(--radius);
+        margin-bottom: 24px;
+        font-family: var(--mono);
+        font-size: 13px;
+      }
+      .integrity-banner.valid {
+        background: #001a10;
+        border: 1px solid var(--green);
+        color: var(--green);
+      }
+      .integrity-banner.invalid {
+        background: #1a0008;
+        border: 1px solid var(--red);
+        color: var(--red);
+      }
+      .integrity-banner .icon {
+        font-size: 20px;
+      }
+
+      /* ── Spinner ───────────────────────────────────────────── */
+      .spinner {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* ── Utility ───────────────────────────────────────────── */
+      .flex {
+        display: flex;
+      }
+      .gap-10 {
+        gap: 10px;
+      }
+      .mt-16 {
+        margin-top: 16px;
+      }
+      .text-muted {
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 11px;
+      }
+      .text-center {
+        text-align: center;
+      }
+      .divider {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 20px 0;
+      }
+      .scroll-area {
+        max-height: 560px;
+        overflow-y: auto;
+      }
+      .scroll-area::-webkit-scrollbar {
+        width: 4px;
+      }
+      .scroll-area::-webkit-scrollbar-track {
+        background: var(--bg);
+      }
+      .scroll-area::-webkit-scrollbar-thumb {
+        background: var(--border-hi);
+        border-radius: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <!-- ── Header ─────────────────────────────────────────── -->
+      <header>
+        <div class="logo-block">
+          <div class="logo">Secure<span>Vote</span></div>
+          <div class="tagline">SHA-256 · Chained Integrity · InnoDB ACID</div>
+        </div>
+        <div class="auth-status" id="auth-status">
+          <div class="dot"></div>
+          <span id="auth-label">NOT AUTHENTICATED</span>
+          <button id="logout-btn" style="display: none" onclick="logout()">
+            LOGOUT
+          </button>
+        </div>
+      </header>
+
+      <!-- ── Tabs ───────────────────────────────────────────── -->
+      <nav class="tabs">
+        <button class="tab-btn active" onclick="switchTab('register', this)">
+          REGISTER
+        </button>
+        <button class="tab-btn" onclick="switchTab('login', this)">
+          LOGIN
+        </button>
+        <button class="tab-btn" onclick="switchTab('vote', this)">VOTE</button>
+        <button class="tab-btn" onclick="switchTab('results', this)">
+          RESULTS
+        </button>
+        <button class="tab-btn" onclick="switchTab('audit', this)">
+          AUDIT CHAIN
+        </button>
+        <button class="tab-btn" onclick="switchTab('logs', this)">LOGS</button>
+      </nav>
+
+      <!-- ════════════════════════════════════════════════════════
+       REGISTER
+  ═══════════════════════════════════════════════════════════ -->
+      <div class="panel active" id="panel-register">
+        <div class="card">
+          <div class="card-title">Create Account</div>
+          <div class="alert" id="reg-alert"></div>
+          <div class="form-group">
+            <label>Username</label>
+            <input
+              type="text"
+              id="reg-username"
+              placeholder="min 3 characters"
+              maxlength="50"
+            />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="reg-email" placeholder="you@example.com" />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input
+              type="password"
+              id="reg-password"
+              placeholder="min 8 characters"
+            />
+          </div>
+          <button class="btn btn-primary" onclick="register()">
+            <span>CREATE ACCOUNT</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════
+       LOGIN
+  ═══════════════════════════════════════════════════════════ -->
+      <div class="panel" id="panel-login">
+        <div class="card">
+          <div class="card-title">Authenticate</div>
+          <div class="alert" id="login-alert"></div>
+          <div class="form-group">
+            <label>Username</label>
+            <input
+              type="text"
+              id="login-username"
+              placeholder="your username"
+            />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input
+              type="password"
+              id="login-password"
+              placeholder="your password"
+            />
+          </div>
+          <button class="btn btn-primary" onclick="login()">
+            <span>AUTHENTICATE</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════
+       VOTE
+  ═══════════════════════════════════════════════════════════ -->
+      <div class="panel" id="panel-vote">
+        <div class="card">
+          <div class="card-title">Cast Your Vote</div>
+          <div class="alert" id="vote-alert"></div>
+          <p class="text-muted" style="margin-bottom: 20px">
+            Select one candidate. Your vote will be cryptographically signed and
+            chained to the previous block.
+          </p>
+          <div class="choice-grid">
+            <div
+              class="choice-card"
+              onclick="selectChoice(this, 'candidate_a')"
+            >
+              <div class="choice-label">Candidate A</div>
+              <div class="choice-id">candidate_a</div>
+            </div>
+            <div
+              class="choice-card"
+              onclick="selectChoice(this, 'candidate_b')"
+            >
+              <div class="choice-label">Candidate B</div>
+              <div class="choice-id">candidate_b</div>
+            </div>
+            <div
+              class="choice-card"
+              onclick="selectChoice(this, 'candidate_c')"
+            >
+              <div class="choice-label">Candidate C</div>
+              <div class="choice-id">candidate_c</div>
+            </div>
+          </div>
+          <button
+            class="btn btn-primary"
+            id="vote-btn"
+            onclick="submitVote()"
+            disabled
+          >
+            SUBMIT VOTE
+          </button>
+        </div>
+
+        <!-- Vote receipt -->
+        <div class="card" id="vote-receipt" style="display: none">
+          <div class="card-title">Vote Receipt</div>
+          <div class="hash-row">
+            <span class="hash-key">Vote ID</span>
+            <span class="hash-val highlight" id="receipt-id"></span>
+          </div>
+          <div class="hash-row">
+            <span class="hash-key">SHA-256</span>
+            <span class="hash-val" id="receipt-hash"></span>
+          </div>
+          <p class="text-muted mt-16">
+            Keep this hash as proof. It is permanently chained into the ledger.
+          </p>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════
+       RESULTS
+  ═══════════════════════════════════════════════════════════ -->
+      <div class="panel" id="panel-results">
+        <div class="card">
+          <div class="card-title">Election Results</div>
+          <div id="results-content">
+            <div class="text-muted text-center" style="padding: 30px 0">
+              <span class="spinner"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════
+       AUDIT CHAIN
+  ═══════════════════════════════════════════════════════════ -->
+      <div class="panel" id="panel-audit">
+        <div id="integrity-banner-wrap"></div>
+        <div class="card">
+          <div class="card-title" style="justify-content: space-between">
+            <span>Cryptographic Vote Chain</span>
+            <button class="btn btn-ghost btn-sm" onclick="loadAudit()">
+              ↺ REFRESH
+            </button>
+          </div>
+          <div id="chain-content">
+            <div class="text-muted text-center" style="padding: 30px 0">
+              <span class="spinner"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════
+       LOGS
+  ═══════════════════════════════════════════════════════════ -->
+      <div class="panel" id="panel-logs">
+        <div class="card">
+          <div class="card-title" style="justify-content: space-between">
+            <span>Audit Event Log</span>
+            <button class="btn btn-ghost btn-sm" onclick="loadLogs()">
+              ↺ REFRESH
+            </button>
+          </div>
+          <div class="scroll-area">
+            <div id="logs-content">
+              <div class="text-muted text-center" style="padding: 30px 0">
+                <span class="spinner"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- .app -->
+
+    <script>
+      // ═══════════════════════════════════════════════════════════
+      //  State
+      // ═══════════════════════════════════════════════════════════
+      let currentUser = null;
+      let selectedChoice = null;
+
+      // Restaure la session au chargement de la page
+      (async () => {
+        try {
+          const res = await apiFetch("/auth/me.php");
+          if (res.status === "success") {
+            setAuthStatus(res.data);
+          }
+        } catch (e) {}
+      })();
+
+      // ═══════════════════════════════════════════════════════════
+      //  API base — adjust if your PHP server runs on a different port
+      // ═══════════════════════════════════════════════════════════
+      const API = "/voting-system/api";
+
+      // ═══════════════════════════════════════════════════════════
+      //  Tabs
+      // ═══════════════════════════════════════════════════════════
+      function switchTab(name, btn) {
+        document
+          .querySelectorAll(".panel")
+          .forEach((p) => p.classList.remove("active"));
+        document
+          .querySelectorAll(".tab-btn")
+          .forEach((b) => b.classList.remove("active"));
+        document.getElementById("panel-" + name).classList.add("active");
+        btn.classList.add("active");
+
+        if (name === "results") loadResults();
+        if (name === "audit") loadAudit();
+        if (name === "logs") loadLogs();
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      //  Auth status bar
+      // ═══════════════════════════════════════════════════════════
+      function setAuthStatus(user) {
+        currentUser = user;
+        const el = document.getElementById("auth-status");
+        const lbl = document.getElementById("auth-label");
+        const btn = document.getElementById("logout-btn");
+
+        if (user) {
+          el.classList.add("logged-in");
+          lbl.textContent = user.username.toUpperCase();
+          btn.style.display = "inline-block";
+        } else {
+          el.classList.remove("logged-in");
+          lbl.textContent = "NOT AUTHENTICATED";
+          btn.style.display = "none";
+        }
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      //  Alert helper
+      // ═══════════════════════════════════════════════════════════
+      function showAlert(id, type, msg) {
+        const el = document.getElementById(id);
+        el.className = `alert alert-${type} show`;
+        el.innerHTML = `<span>${type === "success" ? "✓" : type === "error" ? "✗" : "ℹ"}</span><span>${msg}</span>`;
+      }
+      function hideAlert(id) {
+        const el = document.getElementById(id);
+        el.className = "alert";
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      //  Generic fetch wrapper
+      // ═══════════════════════════════════════════════════════════
+      async function apiFetch(path, opts = {}) {
+        const r = await fetch(API + path, {
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            ...(opts.headers || {}),
+          },
+          ...opts,
+        });
+        return r.json();
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      //  Register
+      // ═══════════════════════════════════════════════════════════
+      async function register() {
+        hideAlert("reg-alert");
+        const username = document.getElementById("reg-username").value.trim();
+        const email = document.getElementById("reg-email").value.trim();
+        const password = document.getElementById("reg-password").value;
+
+        if (!username || !email || !password) {
+          return showAlert("reg-alert", "error", "All fields are required.");
+        }
+
+        const res = await apiFetch("/auth/register.php", {
+          method: "POST",
+          body: JSON.stringify({ username, email, password }),
+        });
+
+        if (res.status === "success") {
+          showAlert(
+            "reg-alert",
+            "success",
+            `Account created for "${res.data.username}". You may now log in.`,
+          );
+          document.getElementById("reg-password").value = "";
+        } else {
+          showAlert("reg-alert", "error", res.message);
+        }
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      //  Login
+      // ═══════════════════════════════════════════════════════════
+      async function login() {
+        hideAlert("login-alert");
+        const username = document.getElementById("login-username").value.trim();
+        const password = document.getElementById("login-password").value;
+
+        if (!username || !password) {
+          return showAlert(
+            "login-alert",
+            "error",
+            "Username and password required.",
+          );
+        }
+
+        const res = await apiFetch("/auth/login.php", {
+          method: "POST",
+          body: JSON.stringify({ username, password }),
+        });
+
+        if (res.status === "success") {
+          setAuthStatus(res.data);
+          document.getElementById("login-password").value = "";
+          showAlert("login-alert", "success", `Welcome, ${res.data.username}.`);
+        } else {
+          showAlert("login-alert", "error", res.message);
+        }
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      //  Logout
+      // ═══════════════════════════════════════════════════════════
+      async function logout() {
+        await apiFetch("/auth/logout.php", { method: "POST" });
+        setAuthStatus(null);
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      //  Vote
+      // ═══════════════════════════════════════════════════════════
+      function selectChoice(el, choice) {
+        document
+          .querySelectorAll(".choice-card")
+          .forEach((c) => c.classList.remove("selected"));
+        el.classList.add("selected");
+        selectedChoice = choice;
+        document.getElementById("vote-btn").disabled = false;
+      }
+
+      async function submitVote() {
+        if (!selectedChoice) return;
+        if (!currentUser) {
+          return showAlert(
+            "vote-alert",
+            "error",
+            "You must be logged in to vote.",
+          );
+        }
+
+        hideAlert("vote-alert");
+        const btn = document.getElementById("vote-btn");
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> SUBMITTING…';
+
+        const res = await apiFetch("/vote/submit.php", {
+          method: "POST",
+          body: JSON.stringify({ choice: selectedChoice }),
+        });
+
+        btn.textContent = "SUBMIT VOTE";
+
+        if (res.status === "success") {
+          showAlert(
+            "vote-alert",
+            "success",
+            "Vote recorded and chained successfully.",
+          );
+          document.getElementById("receipt-id").textContent =
+            "#" + res.data.vote_id;
+          document.getElementById("receipt-hash").textContent = res.data.hash;
+          document.getElementById("vote-receipt").style.display = "block";
+          // Disable re-vote UI
+          document.querySelectorAll(".choice-card").forEach((c) => {
+            c.style.pointerEvents = "none";
+            c.style.opacity = ".5";
+          });
+        } else {
+          btn.disabled = false;
+          showAlert("vote-alert", "error", res.message);
+        }
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      //  Results
+      // ═══════════════════════════════════════════════════════════
+      async function loadResults() {
+        document.getElementById("results-content").innerHTML =
+          '<div class="text-muted text-center" style="padding:30px 0"><span class="spinner"></span></div>';
+
+        const res = await apiFetch("/vote/results.php");
+
+        if (res.status !== "success") {
+          document.getElementById("results-content").innerHTML =
+            '<p class="text-muted">Failed to load results.</p>';
+          return;
+        }
+
+        const { total, breakdown } = res.data;
+
+        if (total === 0) {
+          document.getElementById("results-content").innerHTML =
+            '<p class="text-muted text-center" style="padding:20px 0">No votes cast yet.</p>';
+          return;
+        }
+
+        const names = {
+          candidate_a: "Candidate A",
+          candidate_b: "Candidate B",
+          candidate_c: "Candidate C",
+        };
+        const colors = ["var(--green)", "var(--blue)", "var(--amber)"];
+
+        let html = `<p class="text-muted" style="margin-bottom:20px">Total votes: <strong style="color:var(--text)">${total}</strong></p>`;
+
+        breakdown.forEach((row, i) => {
+          const pct = Math.round((row.total / total) * 100);
+          const color = colors[i] || "var(--muted)";
+          html += `
+      <div class="result-row">
+        <div class="result-header">
+          <span>${names[row.choice] || row.choice}</span>
+          <span class="result-pct">${row.total} votes · ${pct}%</span>
+        </div>
+        <div class="result-bar-track">
+          <div class="result-bar-fill" style="width:${pct}%;background:${color}"></div>
+        </div>
+      </div>`;
+        });
+
+        document.getElementById("results-content").innerHTML = html;
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      //  Audit chain
+      // ═══════════════════════════════════════════════════════════
+      async function loadAudit() {
+        document.getElementById("chain-content").innerHTML =
+          '<div class="text-muted text-center" style="padding:30px 0"><span class="spinner"></span></div>';
+        document.getElementById("integrity-banner-wrap").innerHTML = "";
+
+        const res = await apiFetch("/audit/chain.php");
+        if (res.status !== "success") return;
+
+        const { valid, total, tampered_at, detail, votes } = res.data;
+
+        // ── Integrity banner
+        const bannerCls = valid ? "valid" : "invalid";
+        const icon = valid ? "✓" : "⚠";
+        document.getElementById("integrity-banner-wrap").innerHTML = `
+    <div class="integrity-banner ${bannerCls}">
+      <span class="icon">${icon}</span>
+      <span>${detail} &nbsp;·&nbsp; ${total} block(s) inspected.</span>
+    </div>`;
+
+        if (votes.length === 0) {
+          document.getElementById("chain-content").innerHTML =
+            '<p class="text-muted text-center" style="padding:20px 0">Chain is empty.</p>';
+          return;
+        }
+
+        // ── Blocks
+        let html = '<div class="scroll-area">';
+        votes.forEach((v, i) => {
+          const ok = v.hash_valid && v.chain_valid;
+          html += `
+      ${i > 0 ? '<div class="chain-connector">↑ prev_hash</div>' : ""}
+      <div class="chain-block ${ok ? "valid" : "invalid"}">
+        <div class="chain-block-header">
+          <span class="block-id">BLOCK #${v.id} &nbsp;·&nbsp; ${v.username} &nbsp;·&nbsp; ${v.voted_at}</span>
+          <span class="block-badge ${ok ? "ok" : "err"}">${ok ? "✓ VALID" : "✗ TAMPERED"}</span>
+        </div>
+        <div class="hash-row"><span class="hash-key">choice</span><span class="hash-val">${v.choice}</span></div>
+        <div class="hash-row"><span class="hash-key">prev_hash</span><span class="hash-val">${v.previous_hash}</span></div>
+        <div class="hash-row"><span class="hash-key">hash</span><span class="hash-val highlight">${v.hash}</span></div>
+      </div>`;
+        });
+        html += "</div>";
+        document.getElementById("chain-content").innerHTML = html;
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      //  Logs
+      // ═══════════════════════════════════════════════════════════
+      async function loadLogs() {
+        document.getElementById("logs-content").innerHTML =
+          '<div class="text-muted text-center" style="padding:30px 0"><span class="spinner"></span></div>';
+
+        const res = await apiFetch("/audit/logs.php");
+
+        if (res.status !== "success") {
+          document.getElementById("logs-content").innerHTML =
+            '<p class="text-muted">Log access requires authentication.</p>';
+          return;
+        }
+
+        const logs = res.data;
+        if (!logs.length) {
+          document.getElementById("logs-content").innerHTML =
+            '<p class="text-muted text-center" style="padding:20px 0">No log entries.</p>';
+          return;
+        }
+
+        let html = `<table class="log-table">
+    <thead><tr>
+      <th>#</th><th>Action</th><th>User</th><th>Detail</th><th>IP</th><th>Time</th>
+    </tr></thead><tbody>`;
+
+        logs.forEach((l) => {
+          const badge = `<span class="action-badge ${l.action}">${l.action}</span>`;
+          html += `<tr>
+      <td>${l.id}</td>
+      <td>${badge}</td>
+      <td>${l.username || "—"}</td>
+      <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.detail || ""}</td>
+      <td>${l.ip_address || "—"}</td>
+      <td>${l.created_at}</td>
+    </tr>`;
+        });
+
+        html += "</tbody></table>";
+        document.getElementById("logs-content").innerHTML = html;
+      }
+    </script>
+  </body>
+</html>

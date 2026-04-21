@@ -1,0 +1,59 @@
+# =============================================================
+#  .htaccess — Apache configuration for SecureVote
+#  Place at project root. Requires AllowOverride All.
+# =============================================================
+
+Options -Indexes -ExecCGI
+ServerSignature Off
+
+# ── Security headers ─────────────────────────────────────────
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options            "DENY"
+    Header always set X-Content-Type-Options     "nosniff"
+    Header always set X-XSS-Protection          "1; mode=block"
+    Header always set Referrer-Policy            "strict-origin-when-cross-origin"
+    Header always set Content-Security-Policy    "default-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:;"
+    Header always set Permissions-Policy         "geolocation=(), microphone=(), camera=()"
+    # HSTS — enable only when running HTTPS
+    # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+    # Remove PHP version disclosure
+    Header unset X-Powered-By
+</IfModule>
+
+# ── Hide .php extension (clean URLs) ─────────────────────────
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Serve index.html as root
+    RewriteRule ^$  public/index.html [L]
+
+    # Block access to sensitive directories
+    RewriteRule ^(config|src|bootstrap\.php)(/|$) - [F,L]
+
+    # Allow direct access to api/ endpoints
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+</IfModule>
+
+# ── PHP settings (override php.ini where allowed) ────────────
+<IfModule mod_php.c>
+    php_flag  display_errors        Off
+    php_flag  log_errors            On
+    php_value error_reporting       E_ALL
+    php_flag  expose_php            Off
+    php_value session.cookie_httponly 1
+    php_value session.cookie_samesite Strict
+    php_value session.use_strict_mode 1
+    php_value session.gc_maxlifetime  3600
+</IfModule>
+
+# ── Block direct access to raw PHP source in sensitive dirs ──
+<FilesMatch "^(bootstrap|database)\.php$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# ── Disable ETag (prevent inode info leakage) ────────────────
+FileETag None
